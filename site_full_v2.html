@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCQ Practice</title>
+<style>
+  :root{
+    --bg:#ffffff; --card:#ffffff; --border:#d9d9d9; --text:#1f2937; --muted:#6b7280; --primary:#2563eb; --btn:#f3f4f6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:#fff;}
+  header .status{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);}
+  header .url{max-width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280}
+  main{max-width:760px;margin:24px auto 96px;padding:0 16px;}
+  .card{border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--card);}
+  .qtitle{font-weight:600;margin:0 0 10px 0}
+  .option{display:block;margin:8px 0;font-size:15px;line-height:1.35;}
+  .controls{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+  button{border:1px solid var(--border);background:var(--btn);padding:8px 14px;border-radius:8px;font-size:14px;cursor:pointer;}
+  button.primary{background:#2563eb;color:#fff;border-color:#1d4ed8}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .progress{margin-top:10px;color:var(--muted);font-size:14px}
+  .feedback{margin-top:8px;font-weight:600}
+  .correct{color:#16a34a}
+  .wrong{color:#dc2626}
+  .footer{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:center;padding:14px;background:linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8));border-top:1px solid var(--border);gap:10px;}
+  .footer button{min-width:120px}
+  .nav{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--muted);font-size:14px}
+  .divider{flex:1}
+  .hint{font-size:13px;color:var(--muted);margin-top:4px}
+  .checkbox{transform:scale(1.1);margin-right:8px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px 0}
+  .filters input{padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;max-width:320px}
+</style>
+</head>
+<body>
+<header>
+  <div class="status">
+    <span id="clock">--:--</span>
+    <span aria-hidden="true">🔕</span>
+  </div>
+  <div class="url">quiz.practice</div>
+  <div style="width:24px"></div>
+</header>
+
+<main>
+  <div class="filters">
+    <input id="search" placeholder="Search in question text..." />
+    <button id="applySearch">Search</button>
+    <button id="clearSearch">Clear</button>
+  </div>
+  <div class="card">
+    <p class="qtitle" id="qtitle"></p>
+    <div id="options"></div>
+    <div class="controls">
+      <button id="checkBtn" class="primary">Check</button>
+      <button id="saveBtn">Save For Later</button>
+      <button id="continueBtn" disabled>Continue</button>
+      <button id="showAnsBtn">Reveal Answer</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="progress" id="progress"></div>
+  </div>
+
+  <div class="nav">
+    <button id="prevBtn">◀︎ Prev</button>
+    <div class="divider"></div>
+    <button id="nextBtn">Next ▶︎</button>
+  </div>
+  <p class="hint">Tip: “Save For Later” stores your current selection locally on this device.</p>
+</main>
+
+<div class="footer" role="toolbar" aria-label="Bottom actions">
+  <button id="jumpStartBtn">Jump to start</button>
+  <button id="jumpEndBtn">Jump to end</button>
+</div>
+
+<script>
+let ALL = [];
+let QUESTIONS = [];
+let idx = 0;
+const selections = loadSelections();
+
+fetch('questions_parsed_full_v2.json')
+  .then(r => r.json())
+  .then(data => { ALL = data; QUESTIONS = ALL; render(); })
+  .catch(err => { document.getElementById('qtitle').textContent = 'Failed to load questions.'; });
+
+function render(){
+  const q = QUESTIONS[idx];
+  if(!q){ document.getElementById('qtitle').textContent = 'No questions match.'; return;}
+  document.getElementById('qtitle').textContent = `${q.id}  ${q.stem}`;
+  const optWrap = document.getElementById('options');
+  optWrap.innerHTML = '';
+  q.options.forEach(opt => {
+    const label = document.createElement('label');
+    label.className = 'option';
+    const input = document.createElement('input');
+    input.type = (q.type === 'single') ? 'radio' : 'checkbox';
+    input.name = 'opts';
+    input.value = opt.key;
+    input.className = 'checkbox';
+    const saved = selections[q.id] || [];
+    if(saved.includes(opt.key)) input.checked = true;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(' ' + opt.text));
+    optWrap.appendChild(label);
+  });
+  document.getElementById('progress').textContent = `${idx+1} of ${QUESTIONS.length}`;
+  setFeedback('');
+  document.getElementById('continueBtn').disabled = true;
+}
+
+function setFeedback(text, cls=''){
+  const fb = document.getElementById('feedback');
+  fb.textContent = text;
+  fb.className = 'feedback ' + cls;
+}
+
+document.getElementById('checkBtn').addEventListener('click', () => {
+  const q = QUESTIONS[idx];
+  const selected = Array.from(document.querySelectorAll('input[name="opts"]:checked')).map(i=>i.value).sort();
+  const correct = [...q.correct].sort();
+  if(JSON.stringify(selected) === JSON.stringify(correct)){
+    setFeedback('✅ Correct!', 'correct');
+    document.getElementById('continueBtn').disabled = false;
+  }else{
+    setFeedback('❌ Try again', 'wrong');
+  }
+});
+
+document.getElementById('showAnsBtn').addEventListener('click', () => {
+  const q = QUESTIONS[idx];
+  setFeedback('Answer: ' + q.correct.join(', '), 'correct');
+});
+
+document.getElementById('saveBtn').addEventListener('click', () => {
+  const q = QUESTIONS[idx];
+  const selected = Array.from(document.querySelectorAll('input[name="opts"]:checked')).map(i=>i.value);
+  selections[q.id] = selected;
+  localStorage.setItem('mcqSelections', JSON.stringify(selections));
+  setFeedback('💾 Saved for later on this device.');
+  setTimeout(()=> setFeedback(''), 1200);
+});
+
+document.getElementById('continueBtn').addEventListener('click', goNext);
+document.getElementById('prevBtn').addEventListener('click', () => { if(idx>0){ idx--; render(); }});
+document.getElementById('nextBtn').addEventListener('click', goNext);
+document.getElementById('jumpStartBtn').addEventListener('click', () => { idx = 0; render(); });
+document.getElementById('jumpEndBtn').addEventListener('click', () => { idx = QUESTIONS.length-1; render(); });
+
+document.getElementById('applySearch').addEventListener('click', () => {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  if(!q){ QUESTIONS = ALL; idx = 0; render(); return; }
+  QUESTIONS = ALL.filter(item => (item.stem + ' ' + item.options.map(o=>o.text).join(' ')).toLowerCase().includes(q));
+  idx = 0; render();
+});
+document.getElementById('clearSearch').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  QUESTIONS = ALL; idx = 0; render();
+});
+
+function goNext(){
+  if(idx < QUESTIONS.length-1){ idx++; render(); }
+  else { setFeedback("🎉 You've reached the end.", 'correct'); }
+}
+
+function loadSelections(){
+  try{ return JSON.parse(localStorage.getItem('mcqSelections') || '{}'); }catch(e){ return {}; }
+}
+(function initClock(){
+  const clock = document.getElementById('clock');
+  const upd = ()=>{
+    const d = new Date();
+    const pad = n => n.toString().padStart(2,'0');
+    clock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  upd(); setInterval(upd, 10000);
+})();
+</script>
+</body>
+</html>
