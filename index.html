@@ -125,7 +125,7 @@ const selections = loadSelections();
 
 fetch('questions_parsed_full_v2.json')
   .then(r => r.json())
-  .then(data => { ALL = data; QUESTIONS = ALL; mergeAdded(); render(); })
+  .then(data => { ALL = data; mergeAdded(); idx = 0; (); render(); })
   .catch(err => { document.getElementById('qtitle').textContent = 'Failed to load questions.'; });
 
 function render(){
@@ -193,13 +193,20 @@ document.getElementById('jumpEndBtn').addEventListener('click', () => { idx = QU
 
 document.getElementById('applySearch').addEventListener('click', () => {
   const q = document.getElementById('search').value.trim().toLowerCase();
-  if(!q){ QUESTIONS = ALL; idx = 0; render(); return; }
-  QUESTIONS = ALL.filter(item => (item.stem + ' ' + item.options.map(o=>o.text).join(' ')).toLowerCase().includes(q));
+  // always search the merged list so added questions are included
+  const merged = mergeAdded();
+  if(!q){ QUESTIONS = merged; idx = 0; render(); return; }
+  QUESTIONS = merged.filter(item => {
+    const optsText = (Array.isArray(item.options) ? item.options.map(o=>o.text) 
+                    : Object.values(item.options||{})).join(' ');
+    return (item.stem + ' ' + optsText).toLowerCase().includes(q);
+  });
   idx = 0; render();
 });
+
 document.getElementById('clearSearch').addEventListener('click', () => {
   document.getElementById('search').value = '';
-  QUESTIONS = ALL; idx = 0; render();
+  QUESTIONS = mergeAdded(); idx = 0; render();
 });
 
 function goNext(){
@@ -264,8 +271,12 @@ document.getElementById('saveEditBtn').addEventListener('click', () => {
 const oldRender = render;
 render = function(){
   const q = QUESTIONS[idx];
-  if(edits[q.id]){
+  if (q && edits && edits[q.id]) {
     Object.assign(q, edits[q.id]);
+  }
+  // normalize options so both array and object shapes render
+  if (q && !Array.isArray(q.options) && q.options && typeof q.options === 'object') {
+    q.options = Object.keys(q.options).sort().map(k => ({key:k, text:String(q.options[k])}));
   }
   oldRender();
 };
@@ -274,12 +285,36 @@ let added = JSON.parse(localStorage.getItem('added_questions') || '[]');
 
 // merge added questions after the JSON loads
 // (put this right after you set ALL = data; QUESTIONS = ALL;)
+  function romanToInt(s){
+  if(!s) return 0;
+  const map = {I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
+  let total=0, prev=0; s=s.toUpperCase();
+  for(let i=s.length-1;i>=0;i--){
+    const v = map[s[i]]||0;
+    total += (v<prev)?-v:v;
+    prev = v;
+  }
+  return total;
+}
+function sortById(a,b){
+  const pa = String(a.id||'').split('.');
+  const pb = String(b.id||'').split('.');
+  const A = /^\d+$/.test(pa[0]) ? parseInt(pa[0],10) : romanToInt(pa[0]);
+  const B = /^\d+$/.test(pb[0]) ? parseInt(pb[0],10) : romanToInt(pb[0]);
+  const a2 = parseInt(pa[1]||'0',10);
+  const b2 = parseInt(pb[1]||'0',10);
+  return (A-B) || (a2-b2);
+}
 function mergeAdded() {
   if (!Array.isArray(added)) added = [];
-  // avoid duplicates by id
-  const existingIds = new Set(ALL.map(q => q.id));
-  const filtered = added.filter(q => !existingIds.has(q.id));
-  QUESTIONS = ALL.concat(filtered);
+  // dedupe by id (added overrides base if same id)
+  const byId = new Map();
+  ALL.forEach(q => q && q.id && byId.set(q.id, q));
+  added.forEach(q => q && q.id && byId.set(q.id, q));
+  // create merged + natural sort
+  const merged = Array.from(byId.values()).sort(sortById);
+  QUESTIONS = merged;
+  return merged; // handy for search
 }
  // hook into your fetch then(...) where you currently have: 
  // .then(data => { ALL = data; QUESTIONS = ALL; render(); })
