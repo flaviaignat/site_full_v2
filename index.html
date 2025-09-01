@@ -61,6 +61,7 @@
       <button id="showAnsBtn">Reveal Answer</button>
       <button id="reportBtn">Report Error</button>
       <button id="editBtn">Edit</button>
+      <button id="addQBtn">Add Question</button>
     </div>
     <div class="feedback" id="feedback"></div>
     <div class="progress" id="progress"></div>
@@ -73,6 +74,34 @@
   </label><br><br>
   <button id="saveEditBtn">Save Changes</button>
   <button id="cancelEditBtn">Cancel</button>
+</div>
+  <div id="newQ" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+  <h4>Add New Question</h4>
+  <label>Question ID (e.g., XII.110):<br>
+    <input id="newQId" style="width:100%;" />
+  </label><br><br>
+
+  <label>Stem:<br>
+    <textarea id="newQStem" style="width:100%; height:60px;"></textarea>
+  </label><br><br>
+
+  <label>Type:<br>
+    <select id="newQType" style="width:100%;">
+      <option value="single">single (one correct)</option>
+      <option value="multi">multi (multiple correct)</option>
+    </select>
+  </label><br><br>
+
+  <label>Options (one per line, like “a. text”, “b. text”…):<br>
+    <textarea id="newQOptions" style="width:100%; height:120px;"></textarea>
+  </label><br><br>
+
+  <label>Correct answers (letters, comma-separated; e.g., “c” or “a,c,e”):<br>
+    <input id="newQCorrect" style="width:100%;" />
+  </label><br><br>
+
+  <button id="saveNewQBtn">Save Question</button>
+  <button id="cancelNewQBtn">Cancel</button>
 </div>
   <div class="nav">
     <button id="prevBtn">◀︎ Prev</button>
@@ -95,7 +124,7 @@ const selections = loadSelections();
 
 fetch('questions_parsed_full_v2.json')
   .then(r => r.json())
-  .then(data => { ALL = data; QUESTIONS = ALL; render(); })
+  .then(data => { ALL = data; QUESTIONS = ALL; mergeAdded(); render(); })
   .catch(err => { document.getElementById('qtitle').textContent = 'Failed to load questions.'; });
 
 function render(){
@@ -239,6 +268,81 @@ render = function(){
   }
   oldRender();
 };
+  // ----- Add-new-question feature -----
+let added = JSON.parse(localStorage.getItem('added_questions') || '[]');
+
+// merge added questions after the JSON loads
+// (put this right after you set ALL = data; QUESTIONS = ALL;)
+function mergeAdded() {
+  if (!Array.isArray(added)) added = [];
+  // avoid duplicates by id
+  const existingIds = new Set(ALL.map(q => q.id));
+  const filtered = added.filter(q => !existingIds.has(q.id));
+  QUESTIONS = ALL.concat(filtered);
+}
+ // hook into your fetch then(...) where you currently have: 
+ // .then(data => { ALL = data; QUESTIONS = ALL; render(); })
+ // change to:
+ // .then(data => { ALL = data; QUESTIONS = ALL; mergeAdded(); render(); })
+
+// open the new-question panel
+document.getElementById('addQBtn').addEventListener('click', () => {
+  document.getElementById('newQ').style.display = 'block';
+  // sensible defaults
+  document.getElementById('newQId').value = '';
+  document.getElementById('newQStem').value = '';
+  document.getElementById('newQType').value = 'single';
+  document.getElementById('newQOptions').value = 'a. \nb. \nc. \nd. \ne. ';
+  document.getElementById('newQCorrect').value = '';
+});
+
+// cancel
+document.getElementById('cancelNewQBtn').addEventListener('click', () => {
+  document.getElementById('newQ').style.display = 'none';
+});
+
+// save
+document.getElementById('saveNewQBtn').addEventListener('click', () => {
+  const id = document.getElementById('newQId').value.trim();
+  const stem = document.getElementById('newQStem').value.trim();
+  const type = document.getElementById('newQType').value;
+  const optsLines = document.getElementById('newQOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const correct = document.getElementById('newQCorrect').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+
+  if(!id || !stem || optsLines.length < 2 || correct.length === 0){
+    alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
+    return;
+  }
+
+  // parse options like "a. text"
+  const options = [];
+  for(const line of optsLines){
+    const m = line.match(/^([a-e])\.\s*(.+)$/i);
+    if(!m){ alert('Options must look like "a. text"'); return; }
+    options.push({ key: m[1].toLowerCase(), text: m[2] });
+  }
+
+  const q = { id, stem, type, options, correct };
+
+  // prevent duplicate IDs with existing content
+  const existsInAll = QUESTIONS.some(x => x.id === id);
+  if(existsInAll){
+    const ok = confirm('A question with this ID exists. Add anyway as a new item?');
+    if(!ok) return;
+  }
+
+  added.push(q);
+  localStorage.setItem('added_questions', JSON.stringify(added));
+
+  // add to in-memory list so it appears immediately
+  QUESTIONS.push(q);
+
+  alert('New question saved (locally). It will appear in search and navigation.');
+  document.getElementById('newQ').style.display = 'none';
+  // jump to the new question
+  idx = QUESTIONS.length - 1;
+  render();
+});
 </script>
 </body>
 </html>
