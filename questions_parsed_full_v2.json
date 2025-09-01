@@ -12844,157 +12844,72 @@
       "a","c","e"
     ]
   },
-  {
+   {
     "id": "I.45",
     "stem": "Among the extrapulmonary manifestations of bronchial carcinoma are:",
     "type": "multi",
     "options": [
-      { 
-        "key": "a", 
-        "text": "weight loss" },
-      { 
-        "key": "b", 
-        "text": "hypercalcemia" },
-      { 
-        "key": "c", 
-        "text": "migratory thrombosis" },
-      { 
-        "key": "d", 
-        "text": "weight gain" },
-      { 
-        "key": "e", 
-        "text": "breathing difficulties" }
+      { "key": "a", "text": "weight loss" },
+      { "key": "b", "text": "hypercalcemia" },
+      { "key": "c", "text": "migratory thrombosis" },
+      { "key": "d", "text": "weight gain" },
+      { "key": "e", "text": "breathing difficulties" }
     ],
     "correct": ["a","b","c"]
   },
-  { 
+  {
     "id": "I.46",
     "stem": "Types of therapies for bronchial carcinoma:",
     "type": "multi",
     "options": [
-      {
-        "key": "a",
-        "text": "tumour removal surgery"
-      },
-      {
-        "key": "b",
-        "text": "radiotherapy"
-      },
-      {
-        "key": "c",
-        "text": "chemotherapy"
-      },
-      {
-        "key": "d",
-        "text": "vitamin therapy"
-      },
-      {
-        "key": "e",
-        "text": "palliative radiotherapy"
-      }
+      { "key": "a", "text": "tumour removal surgery" },
+      { "key": "b", "text": "radiotherapy" },
+      { "key": "c", "text": "chemotherapy" },
+      { "key": "d", "text": "vitamin therapy" },
+      { "key": "e", "text": "palliative radiotherapy" }
     ],
-    "correct": [
-      "a",
-      "b",
-      "c",
-      "e"
-    ]
+    "correct": ["a","b","c","e"]
   },
   {
     "id": "I.47",
     "stem": "Surgical treatment for the removal of the tumour in bronchial carcinoma is reserved for:",
     "type": "single",
     "options": [
-      {
-        "key": "a",
-        "text": "all cell types"
-      },
-      {
-        "key": "b",
-        "text": "early stages of non–small cell types"
-      },
-      {
-        "key": "c",
-        "text": "cannot be applied in bronchial carcinoma"
-      },
-      {
-        "key": "d",
-        "text": "all stages of small cell carcinoma"
-      },
-      {
-        "key": "e",
-        "text": "all stages of non–small cell carcinoma"
-      }
+      { "key": "a", "text": "all cell types" },
+      { "key": "b", "text": "early stages of non–small cell types" },
+      { "key": "c", "text": "cannot be applied in bronchial carcinoma" },
+      { "key": "d", "text": "all stages of small cell carcinoma" },
+      { "key": "e", "text": "all stages of non–small cell carcinoma" }
     ],
-    "correct": [
-      "b"
-    ]
+    "correct": ["b"]
   },
   {
     "id": "I.48",
     "stem": "Classically, bronchial carcinoma is divided into:",
     "type": "multi",
     "options": [
-      {
-        "key": "a",
-        "text": "mixed carcinoma"
-      },
-      {
-        "key": "b",
-        "text": "small cell carcinoma"
-      },
-      {
-        "key": "c",
-        "text": "large cell carcinoma"
-      },
-      {
-        "key": "d",
-        "text": "non–small cell carcinoma"
-      },
-      {
-        "key": "e",
-        "text": "there are no more histological types"
-      }
+      { "key": "a", "text": "mixed carcinoma" },
+      { "key": "b", "text": "small cell carcinoma" },
+      { "key": "c", "text": "large cell carcinoma" },
+      { "key": "d", "text": "non–small cell carcinoma" },
+      { "key": "e", "text": "there are no more histological types" }
     ],
-    "correct": [
-      "b",
-      "d"
-    ]
+    "correct": ["b","d"]
   },
   {
     "id": "I.49",
     "stem": "Investigations used in the detection of bronchial carcinoma include:",
     "type": "multi",
     "options": [
-      {
-        "key": "a",
-        "text": "chest X-ray"
-      },
-      {
-        "key": "b",
-        "text": "CT"
-      },
-      {
-        "key": "c",
-        "text": "magnetic resonance"
-      },
-      {
-        "key": "d",
-        "text": "bronchoscopy"
-      },
-      {
-        "key": "e",
-        "text": "PET-CT"
-      }
+      { "key": "a", "text": "chest X-ray" },
+      { "key": "b", "text": "CT" },
+      { "key": "c", "text": "magnetic resonance" },
+      { "key": "d", "text": "bronchoscopy" },
+      { "key": "e", "text": "PET-CT" }
     ],
-    "correct": [
-      "a",
-      "b",
-      "d",
-      "e"
-    ]
-  }
-]
+    "correct": ["a","b","d","e"]
+  },
+  {
     "id": "I.50",
     "stem": "Investigations used for biopsy in bronchial carcinoma include:",
     "type": "multi",
