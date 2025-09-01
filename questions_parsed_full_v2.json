@@ -12818,5 +12818,45 @@
     "correct": [
       "d"
     ]
+  },
+  {
+    "id": "I.44",
+    "stem": "Among the pulmonary symptoms, in case of bronchial carcinoma, there are:",
+    "type": "multi",
+    "options": [
+      { "key": "a", "text": "cough" },
+      { "key": "b", "text": "weight loss" },
+      { "key": "c", "text": "stridor" },
+      { "key": "d", "text": "fever" },
+      { "key": "e", "text": "chest pain" }
+    ],
+    "correct": ["a","c","e"]
+  },
+  {
+    "id": "I.45",
+    "stem": "Among the extrapulmonary manifestations of bronchial carcinoma are:",
+    "type": "multi",
+    "options": [
+      { "key": "a", "text": "weight loss" },
+      { "key": "b", "text": "hypercalcemia" },
+      { "key": "c", "text": "migratory thrombosis" },
+      { "key": "d", "text": "weight gain" },
+      { "key": "e", "text": "breathing difficulties" }
+    ],
+    "correct": ["a","b","c"]
+  },
+  ...
+  {
+    "id": "I.50",
+    "stem": "Investigations used for biopsy in bronchial carcinoma include:",
+    "type": "multi",
+    "options": [
+      { "key": "a", "text": "bronchoscopy" },
+      { "key": "b", "text": "thoracic ultrasound" },
+      { "key": "c", "text": "CT-guided biopsy" },
+      { "key": "d", "text": "mediastinoscopy" },
+      { "key": "e", "text": "magnetic resonance" }
+    ],
+    "correct": ["a","c","d","e"]
   }
 ]
