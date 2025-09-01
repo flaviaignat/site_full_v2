@@ -62,6 +62,7 @@
       <button id="reportBtn">Report Error</button>
       <button id="editBtn">Edit</button>
       <button id="addQBtn">Add Question</button>
+      <button id="exportBtn">Export Corrections</button>
     </div>
     <div class="feedback" id="feedback"></div>
     <div class="progress" id="progress"></div>
@@ -342,6 +343,20 @@ document.getElementById('saveNewQBtn').addEventListener('click', () => {
   // jump to the new question
   idx = QUESTIONS.length - 1;
   render();
+});
+  document.getElementById('exportBtn').addEventListener('click', () => {
+  const data = {
+    reports: reports,
+    edits: edits,
+    added: added || []
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'corrections.json';
+  a.click();
+  URL.revokeObjectURL(url);
 });
 </script>
 </body>
