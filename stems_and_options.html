@@ -167,7 +167,33 @@ e. </textarea>
     }
 
     // --- Render ---
-    function render(list){
+    // --- Render ---
+function parkEditor(){
+  const container = document.getElementById('list');
+  const ed = document.getElementById('editor') || document.getElementById('inlineEditor');
+  if (container && ed && container.contains(ed)) {
+    // Detach editor so clearing #list won't delete it
+    container.removeChild(ed);
+    // Park it somewhere safe (outside the list)
+    document.body.appendChild(ed);
+    // Hide it until the next time you open it
+    ed.style.display = 'none';
+    // Reset the anchor
+    editorHost = null;
+  }
+}
+
+   function render(list){
+  parkEditor(); // <-- add this line
+
+  CURRENT = list.slice();
+  const container = document.getElementById('list');
+  document.getElementById('count').textContent = list.length + ' questions';
+  container.innerHTML = '';
+  const show = document.getElementById('toggleAns').checked;
+
+  // ...rest of your render code...
+}
       CURRENT = list.slice();
       const container = document.getElementById('list');
       document.getElementById('count').textContent = list.length + ' questions';
