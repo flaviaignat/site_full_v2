@@ -182,11 +182,6 @@ function parkEditor(){
    function render(list){
   parkEditor(); // <-- add this line
 
-  CURRENT = list.slice();
-  const container = document.getElementById('list');
-  document.getElementById('count').textContent = list.length + ' questions';
-  container.innerHTML = '';
-  const show = document.getElementById('toggleAns').checked;
 
   // ...rest of your render code...
 function render(list){
@@ -432,7 +427,10 @@ if (saveBtn) {
     // --- Search UI ---
     let t = null;
     document.getElementById('q').addEventListener('input', () => { clearTimeout(t); t = setTimeout(applySearch, 150); });
-    document.getElementById('clearBtn').addEventListener('click', () => { document.getElementById('q').value = ''; applySearch(); });
+    document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('q').value = '';
+  applySearch();
+});
     document.getElementById('toggleAns').addEventListener('change', applySearch);
 
     dbg('dom wired:', !!document.getElementById('list'), !!document.getElementById('exportBtn'), !!document.getElementById('addQBtn'), !!document.getElementById('editor'));
