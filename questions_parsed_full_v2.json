@@ -12908,9 +12908,7 @@
       { "key": "e", "text": "magnetic resonance" }
     ],
     "correct": ["a","c","d","e"]
-  [
-  {
-[
+  },
   {
     "id": "VI.1",
     "stem": "Which of the following is not a cause of hypercalcemia?",
