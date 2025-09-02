@@ -30,6 +30,9 @@
     <label style="display:flex; align-items:center; gap:6px;">
       <input type="checkbox" id="toggleAns">
       <span>Show answers</span>
+      <button id="exportBtn">Export merged JSON</button>
+<button id="addQBtn">Add Question</button>
+
     </label>
     <div class="count" id="count">Loading…</div>
   </div>
@@ -188,6 +191,93 @@ document.getElementById('saveEditBtn').addEventListener('click', () => {
   editingQ = null;
   applySearch(); // re-render with edits applied
 });
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  try {
+    const base = await fetch('questions_parsed_full_v2.json').then(r=>r.json());
+
+    // Apply edits + added, with dedupe by id (edits override, added appended/override)
+    const byId = new Map();
+    (base||[]).forEach(q => q && q.id && byId.set(q.id, q));
+
+    // apply edits on top of base
+    const editsObj = JSON.parse(localStorage.getItem('edits') || '{}');
+    Object.keys(editsObj).forEach(id => {
+      const edited = editsObj[id];
+      if (edited && edited.id) byId.set(edited.id, edited);
+    });
+
+    // include added (override if same id)
+    const addedList = JSON.parse(localStorage.getItem('added_questions') || '[]');
+    (Array.isArray(addedList) ? addedList : []).forEach(q => {
+      if (q && q.id) byId.set(q.id, q);
+    });
+
+    // final merged array (keep natural order like your page)
+    const merged = Array.from(byId.values()).sort(sortById);
+
+    // download
+    const blob = new Blob([JSON.stringify(merged, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'questions_merged.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    alert('✅ Exported merged JSON (base + edits + added).');
+  } catch (e) {
+    console.error(e);
+    alert('Export failed. Check console for details.');
+  }
+});
+// open panel
+document.getElementById('addQBtn').addEventListener('click', () => {
+  const p = document.getElementById('newQ');
+  if (p.style.display !== 'block') p.style.display = 'block';
+});
+
+// cancel
+document.getElementById('cancelNewQBtn').addEventListener('click', () => {
+  document.getElementById('newQ').style.display = 'none';
+});
+
+// save new question
+document.getElementById('saveNewQBtn').addEventListener('click', () => {
+  const id = document.getElementById('newQId').value.trim();
+  const stem = document.getElementById('newQStem').value.trim();
+  const type = document.getElementById('newQType').value;
+  const optsLines = document.getElementById('newQOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const correct = document.getElementById('newQCorrect').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+
+  if(!id || !stem || optsLines.length < 2 || correct.length === 0){
+    alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
+    return;
+  }
+
+  // parse options like "a. text"
+  const options = [];
+  for(const line of optsLines){
+    const m = line.match(/^([a-e])\.\s*(.+)$/i);
+    if(!m){ alert('Each option must look like "a. text"'); return; }
+    options.push({ key: m[1].toLowerCase(), text: m[2] });
+  }
+
+  const q = { id, stem, type, options, correct };
+
+  // persist into localStorage
+  let addedArr = [];
+  try { addedArr = JSON.parse(localStorage.getItem('added_questions') || '[]'); }
+  catch(e){ addedArr = []; }
+  // replace if same id exists
+  const idx = addedArr.findIndex(x => x && x.id === id);
+  if (idx >= 0) addedArr[idx] = q; else addedArr.push(q);
+  localStorage.setItem('added_questions', JSON.stringify(addedArr));
+
+  alert('✅ New question saved locally.');
+  document.getElementById('newQ').style.display = 'none';
+
+  // re-render list including the new one
+  // (reuse your existing applySearch which uses mergeBaseAndAdded)
+  applySearch();
+});
 
   </script>
   <div id="editor" style="display:none; margin-top:20px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#fff;">
@@ -198,5 +288,40 @@ document.getElementById('saveEditBtn').addEventListener('click', () => {
   <button id="saveEditBtn">Save Changes</button>
   <button id="cancelEditBtn">Cancel</button>
 </div>
+  <!-- Add Question panel -->
+<div id="newQ" style="display:none; margin:20px 0; padding:12px; border:1px solid #ddd; border-radius:10px; background:#fff;">
+  <h3>Add New Question</h3>
+  <label>Question ID (e.g., I.51 or XII.110):<br>
+    <input id="newQId" style="width:100%;">
+  </label><br><br>
+
+  <label>Stem:<br>
+    <textarea id="newQStem" style="width:100%; height:60px;"></textarea>
+  </label><br><br>
+
+  <label>Type:<br>
+    <select id="newQType" style="width:100%;">
+      <option value="single">single (one correct)</option>
+      <option value="multi">multi (multiple correct)</option>
+    </select>
+  </label><br><br>
+
+  <label>Options (one per line, like “a. text”, “b. text”, …):<br>
+    <textarea id="newQOptions" style="width:100%; height:120px;
+      ">a. 
+      b. 
+      c. 
+      d. 
+      e. </textarea>
+  </label><br><br>
+
+  <label>Correct answers (letters, comma-separated; e.g., “c” or “a,c,e”):<br>
+    <input id="newQCorrect" style="width:100%;">
+  </label><br><br>
+
+  <button id="saveNewQBtn">Save Question</button>
+  <button id="cancelNewQBtn">Cancel</button>
+</div>
+
 </body>
 </html>
