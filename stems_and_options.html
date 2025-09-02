@@ -278,7 +278,12 @@ document.getElementById('saveEditBtn').addEventListener('click', () => {
   const newId   = document.getElementById('editId').value.trim();
   const newType = document.getElementById('editType').value === 'multi' ? 'multi' : 'single';
   const newStem = document.getElementById('editStem').value.trim();
-
+// Prevent duplicate IDs
+const merged = mergeBaseAndAdded(ALL, added);
+if (newId !== oldId && merged.some(x => x && x.id === newId)) {
+  alert(`Another question already uses the ID "${newId}". Pick a unique ID.`);
+  return;
+}
   const optsLines = document.getElementById('editOptions').value
     .split("\n").map(l=>l.trim()).filter(Boolean);
 
