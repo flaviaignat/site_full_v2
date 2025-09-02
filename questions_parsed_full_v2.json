@@ -12908,5 +12908,97 @@
       { "key": "e", "text": "magnetic resonance" }
     ],
     "correct": ["a","c","d","e"]
+  [
+  {
+    "id": "VI.1",
+    "type": "single",
+    "stem": "Which of the following is not a cause of hypercalcemia?",
+    "options": {
+      "a": "Hyperthyroidism",
+      "b": "Thiazide diuretics",
+      "c": "Conn syndrome",
+      "d": "Chronic renal failure",
+      "e": "Hyperparathyroidism"
+    },
+    "correct": ["c"]
+  },
+  {
+    "id": "VI.2",
+    "type": "single",
+    "stem": "Which of the following is not a cause of hypocalcaemia?",
+    "options": {
+      "a": "Hypoparathyroidism",
+      "b": "Rhabdomyolysis",
+      "c": "Vitamin D deficiency",
+      "d": "Cirrhosis",
+      "e": "Hyperparathyroidism"
+    },
+    "correct": ["e"]
+  },
+  {
+    "id": "VI.3",
+    "type": "single",
+    "stem": "Which of the following is not a cause of hypokalaemia?",
+    "options": {
+      "a": "Distribution of potassium in cells",
+      "b": "Alkalosis",
+      "c": "Hyperaldosteronism",
+      "d": "Cushing's disease",
+      "e": "Addison's disease"
+    },
+    "correct": ["e"]
+  },
+  {
+    "id": "VI.4",
+    "type": "single",
+    "stem": "The following is not a type of thyroiditis",
+    "options": {
+      "a": "Acute / suppurative",
+      "b": "Subacute thyroiditis / deQuervain",
+      "c": "Drug / amiodarone induced",
+      "d": "Hypertrophic thyroiditis",
+      "e": "Atrophic thyroiditis / primary myxoedema"
+    },
+    "correct": ["d"]
+  },
+  {
+    "id": "VI.5",
+    "type": "single",
+    "stem": "All of the following are treatment options for thyrotoxicosis, except",
+    "options": {
+      "a": "Synthetic antithyroid drugs (methimazol, carbimazole)",
+      "b": "The sodium iodide u intravenous",
+      "c": "Dexamethasone 2mg",
+      "d": "Levothyroxine",
+      "e": "Beta-blockers - propranolol"
+    },
+    "correct": ["d"]
+  },
+  {
+    "id": "VI.6",
+    "type": "single",
+    "stem": "Which of the following are characteristic of Cushing's disease?",
+    "options": {
+      "a": "ACTH-independent",
+      "b": "CRH-dependent",
+      "c": "Occurs after excessive exogenous glucocorticoid",
+      "d": "Hypercortisolaemia due to pituitary adenoma",
+      "e": "Hypoaldosteronism due to a pituitary adenoma"
+    },
+    "correct": ["d"]
+  },
+  {
+    "id": "VI.7",
+    "type": "single",
+    "stem": "Which of the following is not part of the clinical features of Cushing's syndrome?",
+    "options": {
+      "a": "Facies of the moon",
+      "b": "Obesity of the trunk",
+      "c": "Hypotension",
+      "d": "Proximal myopathy",
+      "e": "Hirsutism"
+    },
+    "correct": ["c"]
   }
 ]
+
