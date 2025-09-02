@@ -231,21 +231,32 @@ document.getElementById('list').addEventListener('click', (e) => {
 // --- Open editor under clicked card ---
 function openEditor(q, host){
   editingQ = q;
-  editorHost = host || null;
-  dbg('openEditor', q.id);
+  // Make sure we anchor under the actual .question card
+  editorHost = host && host.closest ? host.closest('.question') : null;
+  dbg('openEditor', q.id, 'host?', !!editorHost);
 
+  // Get the editor element and guard it
   const editor = document.getElementById('editor');
-  if (editorHost) {
-    editorHost.insertAdjacentElement('afterend', editor);
-  }
+  if (!editor) { dbg('openEditor: #editor not found'); return; }
+  if (!editorHost || !editorHost.parentNode) { dbg('openEditor: no valid host'); return; }
 
-  document.getElementById('editId').value = q.id || '';
-  document.getElementById('editType').value = (q.type === 'multi') ? 'multi' : 'single';
-  document.getElementById('editStem').value = q.stem || '';
-  document.getElementById('editOptions').value = asArrayOptions(q.options)
-    .map(o => `${o.key}. ${o.text}`).join("\n");
-  document.getElementById('editCorrect').value = (q.correct||[]).join(",");
+  // SAFER move: use parentNode.insertBefore with nextSibling (works everywhere)
+  editorHost.parentNode.insertBefore(editor, editorHost.nextSibling);
 
+  // Prefill fields
+  const idInput = document.getElementById('editId');
+  const typeSel = document.getElementById('editType');
+  const stemTA  = document.getElementById('editStem');
+  const optsTA  = document.getElementById('editOptions');
+  const corrInp = document.getElementById('editCorrect');
+
+  if (idInput)  idInput.value  = q.id || '';
+  if (typeSel)  typeSel.value  = (q.type === 'multi') ? 'multi' : 'single';
+  if (stemTA)   stemTA.value   = q.stem || '';
+  if (optsTA)   optsTA.value   = asArrayOptions(q.options).map(o => `${o.key}. ${o.text}`).join("\n");
+  if (corrInp)  corrInp.value  = (q.correct || []).join(",");
+
+  // Show and scroll
   editor.style.display = 'block';
   editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
