@@ -163,28 +163,22 @@ e. </textarea>
       return Array.from(byId.values()).sort(sortById);
     }
 
-    // --- Render ---
+   <script>
+// --- Render ---
 function parkEditor(){
   const container = document.getElementById('list');
   const ed = document.getElementById('editor') || document.getElementById('inlineEditor');
   if (container && ed && container.contains(ed)) {
-    // Detach editor so clearing #list won't delete it
-    container.removeChild(ed);
-    // Park it somewhere safe (outside the list)
-    document.body.appendChild(ed);
-    // Hide it until the next time you open it
-    ed.style.display = 'none';
-    // Reset the anchor
+    container.removeChild(ed);         // don't delete the editor when re-rendering
+    document.body.appendChild(ed);     // park it outside the list
+    ed.style.display = 'none';         // hide until reopened
     editorHost = null;
   }
 }
 
-   function render(list){
-  parkEditor(); // <-- add this line
-
-
-  // ...rest of your render code...
 function render(list){
+  parkEditor();                        // <-- important!
+
   CURRENT = list.slice();
   const container = document.getElementById('list');
   document.getElementById('count').textContent = list.length + ' questions';
@@ -219,6 +213,8 @@ function render(list){
 
   dbg('rendered', list.length, 'items; showAns=', show);
 }
+</script>
+
 
     function applySearch(){
       const term = document.getElementById('q').value.trim().toLowerCase();
