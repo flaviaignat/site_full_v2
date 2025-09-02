@@ -71,7 +71,13 @@
     <div class="progress" id="progress"></div>
   </div>
 <div id="editor" style="display:none; margin-top:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
-  <label>Stem:<br><textarea id="editStem" style="width:100%; height:60px;"></textarea></label><br><br>
+  <label>Stem:<br><textarea id="editStem" style="width:100%; height:60px;"></textarea></label><br><br><label>Type:<br>
+  <select id="editType" style="width:100%;">
+    <option value="single">single (one correct)</option>
+    <option value="multi">multi (multiple correct)</option>
+  </select>
+</label><br><br>
+
   <label>Options:<br><textarea id="editOptions" style="width:100%; height:100px;"></textarea></label><br><br>
   <label>Correct answers (letters, comma-separated):<br>
     <input id="editCorrect" style="width:100%;" />
@@ -301,11 +307,24 @@ document.getElementById('reportBtn').addEventListener('click', () => {
 });
 document.getElementById('editBtn').addEventListener('click', () => {
   const q = QUESTIONS[idx];
-  document.getElementById('editor').style.display = 'block';
-  document.getElementById('editStem').value = q.stem;
-  document.getElementById('editOptions').value = q.options.map(o => `${o.key}. ${o.text}`).join("\n");
-  document.getElementById('editCorrect').value = q.correct.join(",");
+  const ed = document.getElementById('editor');
+  ed.style.display = 'block';
+
+  // Fill fields
+  document.getElementById('editStem').value = q.stem || '';
+  document.getElementById('editType').value = (q.type === 'multi' ? 'multi' : 'single');
+
+  // Support both array/object option shapes
+  const optsArray = Array.isArray(q.options)
+    ? q.options
+    : Object.keys(q.options || {}).map(k => ({ key: k, text: String(q.options[k]) }));
+
+  document.getElementById('editOptions').value =
+    optsArray.map(o => `${o.key}. ${o.text}`).join('\n');
+
+  document.getElementById('editCorrect').value = (q.correct || []).join(',');
 });
+
 
 document.getElementById('cancelEditBtn').addEventListener('click', () => {
   document.getElementById('editor').style.display = 'none';
@@ -314,40 +333,42 @@ document.getElementById('cancelEditBtn').addEventListener('click', () => {
 document.getElementById('saveEditBtn').addEventListener('click', () => {
   const q = QUESTIONS[idx];
 
-  // Stem
+  // Stem & Type
   q.stem = document.getElementById('editStem').value.trim();
+  q.type = document.getElementById('editType').value;
 
   // Options: parse each line like "a. text"
   const optsLines = document.getElementById('editOptions').value
-    .split('\n')
-    .map(l => l.trim())
-    .filter(Boolean);
+    .split('\n').map(l => l.trim()).filter(Boolean);
 
   const options = [];
   for (const line of optsLines) {
-    const m = line.match(/^([a-e])\.\s*(.+)$/i);  // single regex, requires some text after "a."
-    if (!m) {
-      alert('Each option must look like "a. text" (letters a–e).');
-      return; // abort save if any line is malformed
-    }
+    const m = line.match(/^([a-e])\.\s*(.+)$/i);
+    if (!m) { alert('Each option must look like "a. text" (a–e).'); return; }
     options.push({ key: m[1].toLowerCase(), text: m[2] });
   }
   q.options = options;
 
   // Correct letters
-  q.correct = document.getElementById('editCorrect').value
-    .split(',')
-    .map(x => x.trim().toLowerCase())
-    .filter(Boolean);
+  let corr = document.getElementById('editCorrect').value
+    .split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+
+  // If user chose single but entered multiple, keep only first
+  if (q.type === 'single' && corr.length > 1) {
+    alert('Type is single; keeping only the first correct option.');
+    corr = [corr[0]];
+  }
+  q.correct = corr;
 
   // Persist local edits
   edits[q.id] = q;
   localStorage.setItem('edits', JSON.stringify(edits));
 
-  alert('Edits saved locally. They will override this question next time.');
+  alert('Edits saved locally.');
   document.getElementById('editor').style.display = 'none';
   render(); // re-render with edits
 });
+
 
 // Apply edits when rendering
 const oldRender = render;
