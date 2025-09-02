@@ -43,7 +43,7 @@
 
   <div id="list">Loading…</div>
 
-  <!-- Edit panel (must be BEFORE script so listeners can attach) -->
+  <!-- Edit panel -->
   <div id="editor" style="display:none; margin-top:20px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#fff;">
     <h3>Edit Question</h3>
     <label>Stem:<br><textarea id="editStem" style="width:100%; height:60px;"></textarea></label><br><br>
@@ -92,12 +92,14 @@ e. </textarea>
   </footer>
 
   <script>
-    // Load local edits / added questions (from your quiz page usage)
+    // --- State ---
     let edits = JSON.parse(localStorage.getItem('edits') || '{}');
     let added = JSON.parse(localStorage.getItem('added_questions') || '[]');
-    let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]'); // optional flag support
-
-    // Helpers: roman/numeric sort + options normalizer
+    let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]'); // optional flags from main quiz
+    let ALL = [];
+    let CURRENT = []; // currently rendered list (for delegated edit)
+    
+    // --- Helpers ---
     function romanToInt(s){
       if(!s) return 0;
       const map = {I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
@@ -125,9 +127,6 @@ e. </textarea>
       }
       return [];
     }
-
-    let ALL = [];
-
     function mergeBaseAndAdded(base, addedList){
       const byId = new Map();
       (base||[]).forEach(q => q && q.id && byId.set(q.id, q));
@@ -135,7 +134,10 @@ e. </textarea>
       return Array.from(byId.values()).sort(sortById);
     }
 
+    // --- Render ---
     function render(list){
+      CURRENT = list.slice();
+
       const container = document.getElementById('list');
       document.getElementById('count').textContent = list.length + ' questions';
       container.innerHTML = '';
@@ -149,7 +151,7 @@ e. </textarea>
         const div = document.createElement('div');
         div.className = 'question' + (show ? ' show' : '');
 
-        const flagged = wrong.includes(q.id) ? `<span class="flag">🚩 wrong</span>` : '';
+        const flagged = Array.isArray(wrong) && wrong.includes(q.id) ? `<span class="flag">🚩 wrong</span>` : '';
         const optsHtml = opts.map(o => {
           const isCorrect = show && corr.includes(String(o.key).toLowerCase());
           const cls = 'opt' + (isCorrect ? ' correctOpt' : '');
@@ -162,14 +164,8 @@ e. </textarea>
           <div class="stem">${q.stem}</div>
           <div class="options">${optsHtml}</div>
           ${ansLine}
+          <button class="edit-btn" data-id="${q.id}" style="margin-top:8px;">✏️ Edit</button>
         `;
-
-        // add an Edit button to each question card
-        const btn = document.createElement('button');
-        btn.textContent = "✏️ Edit";
-        btn.style.marginTop = "8px";
-        btn.addEventListener('click', () => openEditor(q));
-        div.appendChild(btn);
 
         container.appendChild(div);
       });
@@ -186,7 +182,7 @@ e. </textarea>
       render(filtered);
     }
 
-    // Load base JSON
+    // --- Data load ---
     fetch('questions_parsed_full_v2.json')
       .then(r => r.json())
       .then(data => { ALL = data || []; applySearch(); })
@@ -195,7 +191,18 @@ e. </textarea>
         document.getElementById('count').textContent = '';
       });
 
-    // Edit panel logic
+    // --- Delegated click for Edit buttons (robust across re-renders) ---
+    document.getElementById('list').addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.classList && t.classList.contains('edit-btn')) {
+        const id = t.dataset.id;
+        const q = (CURRENT || []).find(x => x && x.id === id);
+        if (!q) { console.warn('Edit: question id not found', id); return; }
+        openEditor(q);
+      }
+    });
+
+    // --- Edit panel logic ---
     let editingQ = null;
     function openEditor(q){
       editingQ = q;
@@ -228,11 +235,10 @@ e. </textarea>
       applySearch(); // re-render with edits applied
     });
 
-    // Export merged JSON (base + edits + added)
+    // --- Export merged JSON (base + edits + added) ---
     document.getElementById('exportBtn').addEventListener('click', async () => {
       try {
         const base = await fetch('questions_parsed_full_v2.json').then(r=>r.json());
-
         const byId = new Map();
         (base||[]).forEach(q => q && q.id && byId.set(q.id, q));
 
@@ -262,10 +268,9 @@ e. </textarea>
       }
     });
 
-    // Add Question logic
+    // --- Add Question logic ---
     document.getElementById('addQBtn').addEventListener('click', () => {
-      const p = document.getElementById('newQ');
-      p.style.display = 'block';
+      document.getElementById('newQ').style.display = 'block';
     });
     document.getElementById('cancelNewQBtn').addEventListener('click', () => {
       document.getElementById('newQ').style.display = 'none';
@@ -294,7 +299,6 @@ e. </textarea>
       let addedArr = [];
       try { addedArr = JSON.parse(localStorage.getItem('added_questions') || '[]'); }
       catch(e){ addedArr = []; }
-
       const i = addedArr.findIndex(x => x && x.id === id);
       if (i >= 0) addedArr[i] = q; else addedArr.push(q);
       localStorage.setItem('added_questions', JSON.stringify(addedArr));
