@@ -190,34 +190,41 @@ function parkEditor(){
   const show = document.getElementById('toggleAns').checked;
 
   // ...rest of your render code...
+function render(list){
+  CURRENT = list.slice();
+  const container = document.getElementById('list');
+  document.getElementById('count').textContent = list.length + ' questions';
+  container.innerHTML = '';
+  const show = document.getElementById('toggleAns').checked;
+
+  list.forEach(q => {
+    if (edits[q.id]) Object.assign(q, edits[q.id]); // apply local edits
+
+    const opts = asArrayOptions(q.options);
+    const corr = Array.isArray(q.correct) ? q.correct.map(s => String(s).toLowerCase()) : [];
+    const div = document.createElement('div');
+    div.className = 'question' + (show ? ' show' : '');
+
+    const flagged = Array.isArray(wrong) && wrong.includes(q.id) ? `<span class="flag">🚩 wrong</span>` : '';
+    const optsHtml = opts.map(o => {
+      const isCorrect = show && corr.includes(String(o.key).toLowerCase());
+      const cls = 'opt' + (isCorrect ? ' correctOpt' : '');
+      return `<div class="${cls}">${o.key}. ${o.text}</div>`;
+    }).join('');
+    const ansLine = show ? `<div class="ansline">Correct: ${corr.join(', ')}</div>` : '';
+
+    div.innerHTML = `
+      <div class="id">${q.id} ${flagged}</div>
+      <div class="stem">${q.stem}</div>
+      <div class="options">${optsHtml}</div>
+      ${ansLine}
+      <button class="edit-btn" data-id="${q.id}" style="margin-top:8px;">✏️ Edit</button>
+    `;
+    container.appendChild(div);
+  });
+
+  dbg('rendered', list.length, 'items; showAns=', show);
 }
-
-      list.forEach(q => {
-        if(edits[q.id]) Object.assign(q, edits[q.id]); // apply local edits
-
-        const opts = asArrayOptions(q.options);
-        const corr = Array.isArray(q.correct) ? q.correct.map(s=>String(s).toLowerCase()) : [];
-        const div = document.createElement('div');
-        div.className = 'question' + (show ? ' show' : '');
-
-        const flagged = Array.isArray(wrong) && wrong.includes(q.id) ? `<span class="flag">🚩 wrong</span>` : '';
-        const optsHtml = opts.map(o => {
-          const isCorrect = show && corr.includes(String(o.key).toLowerCase());
-          const cls = 'opt' + (isCorrect ? ' correctOpt' : '');
-          return `<div class="${cls}">${o.key}. ${o.text}</div>`;
-        }).join('');
-        const ansLine = show ? `<div class="ansline">Correct: ${corr.join(', ')}</div>` : '';
-
-        div.innerHTML = `
-          <div class="id">${q.id} ${flagged}</div>
-          <div class="stem">${q.stem}</div>
-          <div class="options">${optsHtml}</div>
-          ${ansLine}
-          <button class="edit-btn" data-id="${q.id}" style="margin-top:8px;">✏️ Edit</button>
-        `;
-        container.appendChild(div);
-      });
-      dbg('rendered', list.length, 'items; showAns=', show);
 
     function applySearch(){
       const term = document.getElementById('q').value.trim().toLowerCase();
