@@ -219,22 +219,27 @@ e. </textarea>
       dbg('edit cancelled');
     });
     document.getElementById('saveEditBtn').addEventListener('click', () => {
-      if(!editingQ){ dbg('saveEdit: no editingQ'); return; }
-      editingQ.stem = document.getElementById('editStem').value.trim();
-      const optsLines = document.getElementById('editOptions').value.split("\\n").map(l=>l.trim()).filter(Boolean);
-      editingQ.options = optsLines.map(line => {
-        const m = line.match(/^([a-e])\\.?\\s*(.*)$/i);
-        return { key: (m && m[1] ? m[1] : '?').toLowerCase(), text: (m && m[2] ? m[2] : line) };
-      });
-      editingQ.correct = document.getElementById('editCorrect').value.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
-      edits[editingQ.id] = editingQ;
-      localStorage.setItem('edits', JSON.stringify(edits));
-      document.getElementById('editor').style.display = 'none';
-      editingQ = null;
+  if(!editingQ){ dbg('saveEdit: no editingQ'); return; }
+  editingQ.stem = document.getElementById('editStem').value.trim();
+
+  const optsLines = document.getElementById('editOptions').value
+    .split("\n").map(l=>l.trim()).filter(Boolean);
+  // new forgiving parser here
+  const options = [];
+  const zap = s => s.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+  for (const raw of optsLines){
+    const line = zap(raw);
+    const m = line.match(/^[^a-z0-9]*([a-e])[\.\)]?\s*(.+)$/i);
+    if (m) {
+      options.push({ key: m[1].toLowerCase(), text: m[2] });
+    } else {
+      options.push({ key: '?', text: line });
+    }
+  }
+  editingQ.options = options;
       dbg('edit saved');
       applySearch();
     });
-
     // --- Export merged JSON ---
     document.getElementById('exportBtn').addEventListener('click', async () => {
       try {
