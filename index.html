@@ -63,6 +63,9 @@
       <button id="editBtn">Edit</button>
       <button id="addQBtn">Add Question</button>
       <button id="exportBtn">Export Corrections</button>
+      <button id="reviewWrongBtn">Review Wrong</button>
+      <button id="showAllBtn">All Questions</button>
+
     </div>
     <div class="feedback" id="feedback"></div>
     <div class="progress" id="progress"></div>
@@ -122,6 +125,20 @@ let ALL = [];
 let QUESTIONS = [];
 let idx = 0;
 const selections = loadSelections();
+// ---- Wrong-answers flags (shared with stems_and_options page) ----
+let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]');
+
+function isFlagged(id){ return Array.isArray(wrong) && wrong.includes(id); }
+function flagWrong(id){
+  if(!Array.isArray(wrong)) wrong = [];
+  if(!wrong.includes(id)) wrong.push(id);
+  localStorage.setItem('wrong_ids', JSON.stringify(wrong));
+}
+function unflagWrong(id){
+  if(!Array.isArray(wrong)) return;
+  wrong = wrong.filter(x => x !== id);
+  localStorage.setItem('wrong_ids', JSON.stringify(wrong));
+}
 
 fetch('questions_parsed_full_v2.json')
   .then(r => r.json())
@@ -131,7 +148,9 @@ fetch('questions_parsed_full_v2.json')
 function render(){
   const q = QUESTIONS[idx];
   if(!q){ document.getElementById('qtitle').textContent = 'No questions match.'; return;}
-  document.getElementById('qtitle').textContent = `${q.id}  ${q.stem}`;
+  const flagged = isFlagged(q.id) ? ' 🚩' : '';
+document.getElementById('qtitle').textContent = `${q.id}${flagged}  ${q.stem}`;
+
   const optWrap = document.getElementById('options');
   optWrap.innerHTML = '';
   q.options.forEach(opt => {
@@ -163,13 +182,19 @@ document.getElementById('checkBtn').addEventListener('click', () => {
   const q = QUESTIONS[idx];
   const selected = Array.from(document.querySelectorAll('input[name="opts"]:checked')).map(i=>i.value).sort();
   const correct = [...q.correct].sort();
-  if(JSON.stringify(selected) === JSON.stringify(correct)){
+
+  if (JSON.stringify(selected) === JSON.stringify(correct)) {
     setFeedback('✅ Correct!', 'correct');
     document.getElementById('continueBtn').disabled = false;
-  }else{
+    if (isFlagged(q.id)) unflagWrong(q.id);               // unflag if it was wrong before
+    document.getElementById('qtitle').textContent = `${q.id}  ${q.stem}`; // remove 🚩 immediately
+  } else {
     setFeedback('❌ Try again', 'wrong');
+    flagWrong(q.id);                                      // flag as wrong
+    document.getElementById('qtitle').textContent = `${q.id} 🚩  ${q.stem}`; // show 🚩 immediately
   }
 });
+
 
 document.getElementById('showAnsBtn').addEventListener('click', () => {
   const q = QUESTIONS[idx];
@@ -190,6 +215,41 @@ document.getElementById('prevBtn').addEventListener('click', () => { if(idx>0){ 
 document.getElementById('nextBtn').addEventListener('click', goNext);
 document.getElementById('jumpStartBtn').addEventListener('click', () => { idx = 0; render(); });
 document.getElementById('jumpEndBtn').addEventListener('click', () => { idx = QUESTIONS.length-1; render(); });
+// Review only flagged questions
+document.getElementById('reviewWrongBtn').addEventListener('click', () => {
+  const set = new Set(wrong || []);
+  if (set.size === 0) {
+    setFeedback('No flagged questions yet. Answer one incorrectly to flag it.', '');
+    return;
+  }
+  const merged = mergeAdded(); // your helper that returns current full list (ALL + added, sorted)
+  QUESTIONS = merged.filter(q => set.has(q.id));
+  idx = 0;
+  render();
+  setFeedback(`Reviewing ${QUESTIONS.length} flagged question(s).`, '');
+});
+
+// Return to all questions
+document.getElementById('showAllBtn').addEventListener('click', () => {
+  QUESTIONS = mergeAdded();
+  idx = 0;
+  render();
+  setFeedback('Showing all questions.', '');
+});
+
+// Optional: clear all flags
+const clearFlagsBtn = document.getElementById('clearFlagsBtn');
+if (clearFlagsBtn) {
+  clearFlagsBtn.addEventListener('click', () => {
+    if (!wrong || wrong.length === 0) { setFeedback('No flags to clear.', ''); return; }
+    const ok = confirm(`Clear ${wrong.length} flagged question(s)?`);
+    if (!ok) return;
+    wrong = [];
+    localStorage.setItem('wrong_ids', JSON.stringify(wrong));
+    setFeedback('All flags cleared.', '');
+    render(); // refresh current title to remove 🚩 if shown
+  });
+}
 
 document.getElementById('applySearch').addEventListener('click', () => {
   const q = document.getElementById('search').value.trim().toLowerCase();
@@ -253,16 +313,38 @@ document.getElementById('cancelEditBtn').addEventListener('click', () => {
 
 document.getElementById('saveEditBtn').addEventListener('click', () => {
   const q = QUESTIONS[idx];
+
+  // Stem
   q.stem = document.getElementById('editStem').value.trim();
-  const optsLines = document.getElementById('editOptions').value.split("\n").map(l=>l.trim()).filter(Boolean);
-  q.options = optsLines.map(line=>{
-    const m = line.match(/^([a-e])\.\s*(.*)$/i);
-    return {key:m[1].toLowerCase(), text:m[2]};
-  });
-  q.correct = document.getElementById('editCorrect').value.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+
+  // Options: parse each line like "a. text"
+  const optsLines = document.getElementById('editOptions').value
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean);
+
+  const options = [];
+  for (const line of optsLines) {
+    const m = line.match(/^([a-e])\.\s*(.+)$/i);  // single regex, requires some text after "a."
+    if (!m) {
+      alert('Each option must look like "a. text" (letters a–e).');
+      return; // abort save if any line is malformed
+    }
+    options.push({ key: m[1].toLowerCase(), text: m[2] });
+  }
+  q.options = options;
+
+  // Correct letters
+  q.correct = document.getElementById('editCorrect').value
+    .split(',')
+    .map(x => x.trim().toLowerCase())
+    .filter(Boolean);
+
+  // Persist local edits
   edits[q.id] = q;
   localStorage.setItem('edits', JSON.stringify(edits));
-  alert("Edits saved locally. They will override this question next time.");
+
+  alert('Edits saved locally. They will override this question next time.');
   document.getElementById('editor').style.display = 'none';
   render(); // re-render with edits
 });
