@@ -48,15 +48,36 @@
 
   <div id="list">Loading…</div>
 
-  <!-- Edit panel -->
-  <div id="editor" style="display:none; margin-top:20px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#fff;">
-    <h3>Edit Question</h3>
-    <label>Stem:<br><textarea id="editStem" style="width:100%; height:60px;"></textarea></label><br><br>
-    <label>Options (e.g. "a. text"):<br><textarea id="editOptions" style="width:100%; height:100px;"></textarea></label><br><br>
-    <label>Correct answers (letters, comma-separated):<br><input id="editCorrect" style="width:100%;"></label><br><br>
-    <button id="saveEditBtn">Save Changes</button>
-    <button id="cancelEditBtn">Cancel</button>
-  </div>
+  <!-- Edit panel (inline, movable) -->
+<div id="editor" style="display:none; margin-top:12px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#fff;">
+  <h3 style="margin:0 0 10px 0;">Edit Question</h3>
+
+  <label>Question ID:<br>
+    <input id="editId" style="width:100%; margin-top:4px;">
+  </label><br><br>
+
+  <label>Type:<br>
+    <select id="editType" style="width:100%; margin-top:4px;">
+      <option value="single">single (one correct)</option>
+      <option value="multi">multi (multiple correct)</option>
+    </select>
+  </label><br><br>
+
+  <label>Stem:<br>
+    <textarea id="editStem" style="width:100%; height:60px;"></textarea>
+  </label><br><br>
+
+  <label>Options (e.g. "a. text"):<br>
+    <textarea id="editOptions" style="width:100%; height:100px;"></textarea>
+  </label><br><br>
+
+  <label>Correct answers (letters, comma-separated):<br>
+    <input id="editCorrect" style="width:100%;">
+  </label><br><br>
+  <button id="cancelEditBtn">Cancel</button>
+  <button id="saveEditBtn" class="primary">Save Changes</button>
+  
+</div>
 
   <!-- Add Question panel -->
   <div id="newQ" style="display:none; margin:20px 0; padding:12px; border:1px solid #ddd; border-radius:10px; background:#fff;">
@@ -99,7 +120,7 @@ e. </textarea>
   <script>
     // ---- Debug helpers ----
     const dbgEl = document.getElementById('debug');
-    function dbg(...args){ console.log('[dbg]', ...args); dbgEl.textContent += '\\n' + args.join(' '); }
+    function dbg(...args){ console.log('[dbg]', ...args); dbgEl.textContent += '\n' + args.join(' '); }
     window.addEventListener('error', e => dbg('JS error:', e.message, '@', (e.filename||'').split('/').pop()+':'+e.lineno));
     dbg('script start');
 
@@ -109,6 +130,9 @@ e. </textarea>
     let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]');
     let ALL = [];
     let CURRENT = [];
+    let editingQ = null;
+    let editorHost = null; 
+    // the .question div we clicked
 
     // --- Helpers ---
     function romanToInt(s){
@@ -120,8 +144,8 @@ e. </textarea>
     }
     function sortById(a,b){
       const pa = String(a.id||'').split('.'), pb = String(b.id||'').split('.');
-      const A = /^\\d+$/.test(pa[0]) ? parseInt(pa[0],10) : romanToInt(pa[0]);
-      const B = /^\\d+$/.test(pb[0]) ? parseInt(pb[0],10) : romanToInt(pb[0]);
+      const A = /^\d+$/.test(pa[0]) ? parseInt(pa[0],10) : romanToInt(pa[0]);
+      const B = /^\d+$/.test(pb[0]) ? parseInt(pb[0],10) : romanToInt(pb[0]);
       const a2 = parseInt(pa[1]||'0',10), b2 = parseInt(pb[1]||'0',10);
       return (A-B) || (a2-b2);
     }
@@ -192,54 +216,114 @@ e. </textarea>
       .then(data => { ALL = data || []; dbg('json length', ALL.length); applySearch(); })
       .catch(err => { dbg('fetch/json error:', err); document.getElementById('list').textContent = 'Failed to load questions.'; document.getElementById('count').textContent = ''; });
 
-    // --- Delegated click for Edit buttons ---
-    document.getElementById('list').addEventListener('click', (e) => {
-      const t = e.target;
-      if (t && t.classList && t.classList.contains('edit-btn')) {
-        const id = t.dataset.id;
-        const q = (CURRENT || []).find(x => x && x.id === id);
-        if (!q) { dbg('Edit: id not found', id); return; }
-        openEditor(q);
-      }
-    });
+   // --- Delegated click for Edit buttons ---
+document.getElementById('list').addEventListener('click', (e) => {
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('edit-btn')) {
+    const id = t.dataset.id;
+    const q = (CURRENT || []).find(x => x && x.id === id);
+    if (!q) { dbg('Edit: id not found', id); return; }
+    const host = t.closest('.question');
+    openEditor(q, host);
+  }
+});
 
-    // --- Edit panel logic ---
-    let editingQ = null;
-    function openEditor(q){
-      editingQ = q;
-      dbg('openEditor', q.id);
-      document.getElementById('editor').style.display = 'block';
-      document.getElementById('editStem').value = q.stem || '';
-      document.getElementById('editOptions').value = asArrayOptions(q.options).map(o => `${o.key}. ${o.text}`).join("\\n");
-      document.getElementById('editCorrect').value = (q.correct||[]).join(",");
-    }
-    document.getElementById('cancelEditBtn').addEventListener('click', () => {
-      document.getElementById('editor').style.display = 'none';
-      editingQ = null;
-      dbg('edit cancelled');
-    });
-    document.getElementById('saveEditBtn').addEventListener('click', () => {
+// --- Open editor under clicked card ---
+function openEditor(q, host){
+  editingQ = q;
+  editorHost = host || null;
+  dbg('openEditor', q.id);
+
+  const editor = document.getElementById('editor');
+  if (editorHost) {
+    editorHost.insertAdjacentElement('afterend', editor);
+  }
+
+  document.getElementById('editId').value = q.id || '';
+  document.getElementById('editType').value = (q.type === 'multi') ? 'multi' : 'single';
+  document.getElementById('editStem').value = q.stem || '';
+  document.getElementById('editOptions').value = asArrayOptions(q.options)
+    .map(o => `${o.key}. ${o.text}`).join("\n");
+  document.getElementById('editCorrect').value = (q.correct||[]).join(",");
+
+  editor.style.display = 'block';
+  editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// --- Cancel handler (THIS IS d) ) ---
+document.getElementById('cancelEditBtn').addEventListener('click', () => {
+  document.getElementById('editor').style.display = 'none';
+  editingQ = null;
+  editorHost = null;
+  dbg('edit cancelled');
+});
+
+// --- Save handler (moves the orphaned code into here) ---
+document.getElementById('saveEditBtn').addEventListener('click', () => {
   if(!editingQ){ dbg('saveEdit: no editingQ'); return; }
-  editingQ.stem = document.getElementById('editStem').value.trim();
+
+  const oldId = editingQ.id;
+
+  const newId   = document.getElementById('editId').value.trim();
+  const newType = document.getElementById('editType').value === 'multi' ? 'multi' : 'single';
+  const newStem = document.getElementById('editStem').value.trim();
 
   const optsLines = document.getElementById('editOptions').value
     .split("\n").map(l=>l.trim()).filter(Boolean);
-  // new forgiving parser here
+
+  // forgiving parser for "a. text" / "a) text"
   const options = [];
   const zap = s => s.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
   for (const raw of optsLines){
     const line = zap(raw);
     const m = line.match(/^[^a-z0-9]*([a-e])[\.\)]?\s*(.+)$/i);
-    if (m) {
-      options.push({ key: m[1].toLowerCase(), text: m[2] });
-    } else {
-      options.push({ key: '?', text: line });
-    }
+    if (!m){ alert('Each option must look like "a. text" (letters a–e).'); return; }
+    options.push({ key: m[1].toLowerCase(), text: m[2] });
   }
+
+  const correct = document.getElementById('editCorrect').value
+    .split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+
+  if (!newId || !newStem || options.length < 2 || correct.length === 0) {
+    alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
+    return;
+  }
+  const allowed = new Set(options.map(o=>o.key));
+  for (const k of correct) {
+    if (!allowed.has(k)) { alert(`Correct letter "${k}" is not among option keys ${Array.from(allowed).join(', ')}`); return; }
+  }
+  if (newType === 'single' && correct.length !== 1) {
+    alert('Type is "single" so there must be exactly 1 correct letter.');
+    return;
+  }
+
+  // update in-memory
+  editingQ.id = newId;
+  editingQ.type = newType;
+  editingQ.stem = newStem;
   editingQ.options = options;
-      dbg('edit saved');
-      applySearch();
-    });
+  editingQ.correct = correct;
+
+  // persist to edits store; move key if ID changed
+  const editsObj = JSON.parse(localStorage.getItem('edits') || '{}');
+  if (oldId !== newId && editsObj[oldId]) {
+    editsObj[newId] = Object.assign({}, editsObj[oldId], { id: newId });
+    delete editsObj[oldId];
+  }
+  editsObj[newId] = { id:newId, type:newType, stem:newStem, options, correct };
+  localStorage.setItem('edits', JSON.stringify(editsObj));
+  edits = editsObj;
+
+  // re-render
+  applySearch();
+
+  // close editor
+  document.getElementById('editor').style.display = 'none';
+  dbg('edit saved', newId);
+  editingQ = null;
+  editorHost = null;
+});
+
     // --- Export merged JSON ---
     document.getElementById('exportBtn').addEventListener('click', async () => {
       try {
@@ -264,12 +348,12 @@ e. </textarea>
       const id = document.getElementById('newQId').value.trim();
       const stem = document.getElementById('newQStem').value.trim();
       const type = document.getElementById('newQType').value;
-      const optsLines = document.getElementById('newQOptions').value.split('\\n').map(s=>s.trim()).filter(Boolean);
+      const optsLines = document.getElementById('newQOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
       const correct = document.getElementById('newQCorrect').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
       if(!id || !stem || optsLines.length < 2 || correct.length === 0){ alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.'); return; }
       const options = [];
       for(const line of optsLines){
-        const m = line.match(/^([a-e])\\.?\\s*(.+)$/i);
+        const m = line.match(/^([a-e])\.?\s*(.+)$/i);
         if(!m){ alert('Each option must look like "a. text"'); return; }
         options.push({ key: m[1].toLowerCase(), text: m[2] });
       }
