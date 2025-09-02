@@ -79,9 +79,6 @@
   <button id="saveEditBtn" class="primary">Save Changes</button>
 </div>
 
-  
-</div>
-
   <!-- Add Question panel -->
   <div id="newQ" style="display:none; margin:20px 0; padding:12px; border:1px solid #ddd; border-radius:10px; background:#fff;">
     <h3>Add New Question</h3>
@@ -194,11 +191,6 @@ function parkEditor(){
 
   // ...rest of your render code...
 }
-      CURRENT = list.slice();
-      const container = document.getElementById('list');
-      document.getElementById('count').textContent = list.length + ' questions';
-      container.innerHTML = '';
-      const show = document.getElementById('toggleAns').checked;
 
       list.forEach(q => {
         if(edits[q.id]) Object.assign(q, edits[q.id]); // apply local edits
