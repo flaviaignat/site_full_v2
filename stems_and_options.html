@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>All Stems & Options</title>
+  <title>All Stems & Options (debug)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='#2563eb'/><text x='50' y='62' text-anchor='middle' font-size='58' fill='white'>Q</text></svg>">
   <style>
     body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; margin:20px; line-height:1.5; }
     h1 { margin:0 0 12px; }
@@ -21,6 +22,8 @@
     .show .ansline { display:block; }
     .flag { color:#dc2626; font-size:12px; margin-left:6px; }
     footer { margin:24px 0; text-align:center; font-size:14px; }
+    #debug { white-space:pre-wrap; background:#0b1020; color:#a7ffb1; padding:10px; border-radius:8px; font-size:12px; margin:12px 0; }
+    #debug b { color:#fff; }
   </style>
 </head>
 <body>
@@ -28,6 +31,8 @@
   <p style="margin:8px 0;">
     <a href="index.html" style="color:#2563eb; text-decoration:none;">⬅ Back to Quiz</a>
   </p>
+
+  <div id="debug"><b>Debug:</b> page loaded</div>
 
   <div class="topbar">
     <input id="q" type="search" placeholder="Search stems/options (e.g., pneumonia, fracture)…">
@@ -92,32 +97,32 @@ e. </textarea>
   </footer>
 
   <script>
+    // ---- Debug helpers ----
+    const dbgEl = document.getElementById('debug');
+    function dbg(...args){ console.log('[dbg]', ...args); dbgEl.textContent += '\\n' + args.join(' '); }
+    window.addEventListener('error', e => dbg('JS error:', e.message, '@', (e.filename||'').split('/').pop()+':'+e.lineno));
+    dbg('script start');
+
     // --- State ---
     let edits = JSON.parse(localStorage.getItem('edits') || '{}');
     let added = JSON.parse(localStorage.getItem('added_questions') || '[]');
-    let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]'); // optional flags from main quiz
+    let wrong = JSON.parse(localStorage.getItem('wrong_ids') || '[]');
     let ALL = [];
-    let CURRENT = []; // currently rendered list (for delegated edit)
-    
+    let CURRENT = [];
+
     // --- Helpers ---
     function romanToInt(s){
       if(!s) return 0;
       const map = {I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
       let total=0, prev=0; s=s.toUpperCase();
-      for(let i=s.length-1;i>=0;i--){
-        const v = map[s[i]]||0;
-        total += (v<prev)?-v:v;
-        prev = v;
-      }
+      for(let i=s.length-1;i>=0;i--){ const v = map[s[i]]||0; total += (v<prev)?-v:v; prev=v; }
       return total;
     }
     function sortById(a,b){
-      const pa = String(a.id||'').split('.');
-      const pb = String(b.id||'').split('.');
-      const A = /^\d+$/.test(pa[0]) ? parseInt(pa[0],10) : romanToInt(pa[0]);
-      const B = /^\d+$/.test(pb[0]) ? parseInt(pb[0],10) : romanToInt(pb[0]);
-      const a2 = parseInt(pa[1]||'0',10);
-      const b2 = parseInt(pb[1]||'0',10);
+      const pa = String(a.id||'').split('.'), pb = String(b.id||'').split('.');
+      const A = /^\\d+$/.test(pa[0]) ? parseInt(pa[0],10) : romanToInt(pa[0]);
+      const B = /^\\d+$/.test(pb[0]) ? parseInt(pb[0],10) : romanToInt(pb[0]);
+      const a2 = parseInt(pa[1]||'0',10), b2 = parseInt(pb[1]||'0',10);
       return (A-B) || (a2-b2);
     }
     function asArrayOptions(opts){
@@ -137,7 +142,6 @@ e. </textarea>
     // --- Render ---
     function render(list){
       CURRENT = list.slice();
-
       const container = document.getElementById('list');
       document.getElementById('count').textContent = list.length + ' questions';
       container.innerHTML = '';
@@ -166,9 +170,9 @@ e. </textarea>
           ${ansLine}
           <button class="edit-btn" data-id="${q.id}" style="margin-top:8px;">✏️ Edit</button>
         `;
-
         container.appendChild(div);
       });
+      dbg('rendered', list.length, 'items; showAns=', show);
     }
 
     function applySearch(){
@@ -183,21 +187,18 @@ e. </textarea>
     }
 
     // --- Data load ---
-    fetch('questions_parsed_full_v2.json')
-      .then(r => r.json())
-      .then(data => { ALL = data || []; applySearch(); })
-      .catch(() => {
-        document.getElementById('list').textContent = 'Failed to load questions.';
-        document.getElementById('count').textContent = '';
-      });
+    fetch('questions_parsed_full_v2.json?nocache=' + Date.now())
+      .then(r => { dbg('fetch status', r.status); return r.json(); })
+      .then(data => { ALL = data || []; dbg('json length', ALL.length); applySearch(); })
+      .catch(err => { dbg('fetch/json error:', err); document.getElementById('list').textContent = 'Failed to load questions.'; document.getElementById('count').textContent = ''; });
 
-    // --- Delegated click for Edit buttons (robust across re-renders) ---
+    // --- Delegated click for Edit buttons ---
     document.getElementById('list').addEventListener('click', (e) => {
       const t = e.target;
       if (t && t.classList && t.classList.contains('edit-btn')) {
         const id = t.dataset.id;
         const q = (CURRENT || []).find(x => x && x.id === id);
-        if (!q) { console.warn('Edit: question id not found', id); return; }
+        if (!q) { dbg('Edit: id not found', id); return; }
         openEditor(q);
       }
     });
@@ -206,107 +207,84 @@ e. </textarea>
     let editingQ = null;
     function openEditor(q){
       editingQ = q;
+      dbg('openEditor', q.id);
       document.getElementById('editor').style.display = 'block';
       document.getElementById('editStem').value = q.stem || '';
-      document.getElementById('editOptions').value = asArrayOptions(q.options).map(o => `${o.key}. ${o.text}`).join("\n");
+      document.getElementById('editOptions').value = asArrayOptions(q.options).map(o => `${o.key}. ${o.text}`).join("\\n");
       document.getElementById('editCorrect').value = (q.correct||[]).join(",");
     }
     document.getElementById('cancelEditBtn').addEventListener('click', () => {
       document.getElementById('editor').style.display = 'none';
       editingQ = null;
+      dbg('edit cancelled');
     });
     document.getElementById('saveEditBtn').addEventListener('click', () => {
-      if(!editingQ) return;
+      if(!editingQ){ dbg('saveEdit: no editingQ'); return; }
       editingQ.stem = document.getElementById('editStem').value.trim();
-      const optsLines = document.getElementById('editOptions').value.split("\n").map(l=>l.trim()).filter(Boolean);
+      const optsLines = document.getElementById('editOptions').value.split("\\n").map(l=>l.trim()).filter(Boolean);
       editingQ.options = optsLines.map(line => {
-        const m = line.match(/^([a-e])\.\s*(.*)$/i);
-        return { key: m[1].toLowerCase(), text: m[2] };
+        const m = line.match(/^([a-e])\\.?\\s*(.*)$/i);
+        return { key: (m && m[1] ? m[1] : '?').toLowerCase(), text: (m && m[2] ? m[2] : line) };
       });
       editingQ.correct = document.getElementById('editCorrect').value.split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
-
-      // persist to localStorage
       edits[editingQ.id] = editingQ;
       localStorage.setItem('edits', JSON.stringify(edits));
-
-      alert("✅ Edits saved locally.");
       document.getElementById('editor').style.display = 'none';
       editingQ = null;
-      applySearch(); // re-render with edits applied
+      dbg('edit saved');
+      applySearch();
     });
 
-    // --- Export merged JSON (base + edits + added) ---
+    // --- Export merged JSON ---
     document.getElementById('exportBtn').addEventListener('click', async () => {
       try {
-        const base = await fetch('questions_parsed_full_v2.json').then(r=>r.json());
+        const base = await fetch('questions_parsed_full_v2.json?nocache=' + Date.now()).then(r=>r.json());
         const byId = new Map();
         (base||[]).forEach(q => q && q.id && byId.set(q.id, q));
-
         const editsObj = JSON.parse(localStorage.getItem('edits') || '{}');
-        Object.keys(editsObj).forEach(id => {
-          const edited = editsObj[id];
-          if (edited && edited.id) byId.set(edited.id, edited);
-        });
-
+        Object.keys(editsObj).forEach(id => { const edited = editsObj[id]; if (edited && edited.id) byId.set(edited.id, edited); });
         const addedList = JSON.parse(localStorage.getItem('added_questions') || '[]');
-        (Array.isArray(addedList) ? addedList : []).forEach(q => {
-          if (q && q.id) byId.set(q.id, q);
-        });
-
+        (Array.isArray(addedList) ? addedList : []).forEach(q => { if (q && q.id) byId.set(q.id, q); });
         const merged = Array.from(byId.values()).sort(sortById);
-
         const blob = new Blob([JSON.stringify(merged, null, 2)], {type:'application/json'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'questions_merged.json';
-        a.click();
-        URL.revokeObjectURL(a.href);
-        alert('✅ Exported merged JSON (base + edits + added).');
-      } catch (e) {
-        console.error(e);
-        alert('Export failed. Check console for details.');
-      }
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'questions_merged.json'; a.click(); URL.revokeObjectURL(a.href);
+        dbg('exported', merged.length, 'items');
+      } catch (e) { dbg('export error', e.message); }
     });
 
-    // --- Add Question logic ---
-    document.getElementById('addQBtn').addEventListener('click', () => {
-      document.getElementById('newQ').style.display = 'block';
-    });
-    document.getElementById('cancelNewQBtn').addEventListener('click', () => {
-      document.getElementById('newQ').style.display = 'none';
-    });
+    // --- Add Question ---
+    document.getElementById('addQBtn').addEventListener('click', () => { document.getElementById('newQ').style.display = 'block'; dbg('addQ open'); });
+    document.getElementById('cancelNewQBtn').addEventListener('click', () => { document.getElementById('newQ').style.display = 'none'; dbg('addQ cancel'); });
     document.getElementById('saveNewQBtn').addEventListener('click', () => {
       const id = document.getElementById('newQId').value.trim();
       const stem = document.getElementById('newQStem').value.trim();
       const type = document.getElementById('newQType').value;
-      const optsLines = document.getElementById('newQOptions').value.split('\n').map(s=>s.trim()).filter(Boolean);
+      const optsLines = document.getElementById('newQOptions').value.split('\\n').map(s=>s.trim()).filter(Boolean);
       const correct = document.getElementById('newQCorrect').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-
-      if(!id || !stem || optsLines.length < 2 || correct.length === 0){
-        alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
-        return;
-      }
-
+      if(!id || !stem || optsLines.length < 2 || correct.length === 0){ alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.'); return; }
       const options = [];
       for(const line of optsLines){
-        const m = line.match(/^([a-e])\.\s*(.+)$/i);
+        const m = line.match(/^([a-e])\\.?\\s*(.+)$/i);
         if(!m){ alert('Each option must look like "a. text"'); return; }
         options.push({ key: m[1].toLowerCase(), text: m[2] });
       }
-
       const q = { id, stem, type, options, correct };
-
-      let addedArr = [];
-      try { addedArr = JSON.parse(localStorage.getItem('added_questions') || '[]'); }
-      catch(e){ addedArr = []; }
+      let addedArr = []; try { addedArr = JSON.parse(localStorage.getItem('added_questions') || '[]'); } catch(e){ addedArr = []; }
       const i = addedArr.findIndex(x => x && x.id === id);
       if (i >= 0) addedArr[i] = q; else addedArr.push(q);
       localStorage.setItem('added_questions', JSON.stringify(addedArr));
-
-      alert('✅ New question saved locally.');
       document.getElementById('newQ').style.display = 'none';
+      dbg('addQ saved', id);
       applySearch();
     });
+
+    // --- Search UI ---
+    let t = null;
+    document.getElementById('q').addEventListener('input', () => { clearTimeout(t); t = setTimeout(applySearch, 150); });
+    document.getElementById('clearBtn').addEventListener('click', () => { document.getElementById('q').value = ''; applySearch(); });
+    document.getElementById('toggleAns').addEventListener('change', applySearch);
+
+    dbg('dom wired:', !!document.getElementById('list'), !!document.getElementById('exportBtn'), !!document.getElementById('addQBtn'), !!document.getElementById('editor'));
   </script>
 </body>
 </html>
