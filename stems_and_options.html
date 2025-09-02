@@ -261,84 +261,102 @@ function openEditor(q, host){
   editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// --- Cancel handler (THIS IS d) ) ---
-document.getElementById('cancelEditBtn').addEventListener('click', () => {
-  document.getElementById('editor').style.display = 'none';
-  editingQ = null;
-  editorHost = null;
-  dbg('edit cancelled');
-});
-
-// --- Save handler (moves the orphaned code into here) ---
-document.getElementById('saveEditBtn').addEventListener('click', () => {
-  if(!editingQ){ dbg('saveEdit: no editingQ'); return; }
-
-  const oldId = editingQ.id;
-
-  const newId   = document.getElementById('editId').value.trim();
-  const newType = document.getElementById('editType').value === 'multi' ? 'multi' : 'single';
-  const newStem = document.getElementById('editStem').value.trim();
-// Prevent duplicate IDs
-const merged = mergeBaseAndAdded(ALL, added);
-if (newId !== oldId && merged.some(x => x && x.id === newId)) {
-  alert(`Another question already uses the ID "${newId}". Pick a unique ID.`);
-  return;
+// --- replaced cancel handler ---
+const cancelBtn = document.getElementById('cancelEditBtn');
+if (cancelBtn) {
+  cancelBtn.addEventListener('click', () => {
+    const editor = document.getElementById('editor');
+    if (editor) editor.style.display = 'none';
+    else dbg('cancel: #editor not found');
+    editingQ = null;
+    editorHost = null;
+    dbg('edit cancelled');
+  });
+} else {
+  dbg('cancelEditBtn not found at load');
 }
-  const optsLines = document.getElementById('editOptions').value
-    .split("\n").map(l=>l.trim()).filter(Boolean);
 
-  // forgiving parser for "a. text" / "a) text"
-  const options = [];
-  const zap = s => s.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-  for (const raw of optsLines){
-    const line = zap(raw);
-    const m = line.match(/^[^a-z0-9]*([a-e])[\.\)]?\s*(.+)$/i);
-    if (!m){ alert('Each option must look like "a. text" (letters a–e).'); return; }
-    options.push({ key: m[1].toLowerCase(), text: m[2] });
-  }
 
-  const correct = document.getElementById('editCorrect').value
-    .split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+// --- Save handler (replaced save handler) ---
+const saveBtn = document.getElementById('saveEditBtn');
+if (saveBtn) {
+  saveBtn.addEventListener('click', () => {
+    if (!editingQ) { dbg('saveEdit: no editingQ'); return; }
 
-  if (!newId || !newStem || options.length < 2 || correct.length === 0) {
-    alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
-    return;
-  }
-  const allowed = new Set(options.map(o=>o.key));
-  for (const k of correct) {
-    if (!allowed.has(k)) { alert(`Correct letter "${k}" is not among option keys ${Array.from(allowed).join(', ')}`); return; }
-  }
-  if (newType === 'single' && correct.length !== 1) {
-    alert('Type is "single" so there must be exactly 1 correct letter.');
-    return;
-  }
+    const oldId   = editingQ.id;
+    const newId   = document.getElementById('editId').value.trim();
+    const newType = document.getElementById('editType').value === 'multi' ? 'multi' : 'single';
+    const newStem = document.getElementById('editStem').value.trim();
 
-  // update in-memory
-  editingQ.id = newId;
-  editingQ.type = newType;
-  editingQ.stem = newStem;
-  editingQ.options = options;
-  editingQ.correct = correct;
+    // Prevent duplicate IDs
+    const merged = mergeBaseAndAdded(ALL, added);
+    if (newId !== oldId && merged.some(x => x && x.id === newId)) {
+      alert(`Another question already uses the ID "${newId}". Pick a unique ID.`);
+      return;
+    }
 
-  // persist to edits store; move key if ID changed
-  const editsObj = JSON.parse(localStorage.getItem('edits') || '{}');
-  if (oldId !== newId && editsObj[oldId]) {
-    editsObj[newId] = Object.assign({}, editsObj[oldId], { id: newId });
-    delete editsObj[oldId];
-  }
-  editsObj[newId] = { id:newId, type:newType, stem:newStem, options, correct };
-  localStorage.setItem('edits', JSON.stringify(editsObj));
-  edits = editsObj;
+    const optsLines = document.getElementById('editOptions').value
+      .split('\n').map(l=>l.trim()).filter(Boolean);
 
-  // re-render
-  applySearch();
+    // Accepts "a. text" or "a) text"
+    const options = [];
+    const zap = s => s.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+    for (const raw of optsLines){
+      const line = zap(raw);
+      const m = line.match(/^[^a-z0-9]*([a-e])[.)]?\s*(.+)$/i);
+      if (!m){ alert('Each option must look like "a. text" (letters a–e).'); return; }
+      options.push({ key: m[1].toLowerCase(), text: m[2] });
+    }
 
-  // close editor
-  document.getElementById('editor').style.display = 'none';
-  dbg('edit saved', newId);
-  editingQ = null;
-  editorHost = null;
-});
+    const correct = document.getElementById('editCorrect').value
+      .split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+
+    if (!newId || !newStem || options.length < 2 || correct.length === 0) {
+      alert('Please fill ID, stem, at least 2 options, and at least 1 correct letter.');
+      return;
+    }
+    const allowed = new Set(options.map(o=>o.key));
+    for (const k of correct) {
+      if (!allowed.has(k)) { alert(`Correct letter "${k}" is not among option keys ${Array.from(allowed).join(', ')}`); return; }
+    }
+    if (newType === 'single' && correct.length !== 1) {
+      alert('Type is "single" so there must be exactly 1 correct letter.');
+      return;
+    }
+
+    // Update in-memory
+    editingQ.id = newId;
+    editingQ.type = newType;
+    editingQ.stem = newStem;
+    editingQ.options = options;
+    editingQ.correct = correct;
+
+    // Persist to edits store (move entry if ID changed)
+    const editsObj = JSON.parse(localStorage.getItem('edits') || '{}');
+    if (oldId !== newId && editsObj[oldId]) {
+      editsObj[newId] = Object.assign({}, editsObj[oldId], { id: newId });
+      delete editsObj[oldId];
+    }
+    editsObj[newId] = { id:newId, type:newType, stem:newStem, options, correct };
+    localStorage.setItem('edits', JSON.stringify(editsObj));
+    edits = editsObj;
+
+    // Re-render
+    applySearch();
+
+    // Hide editor (guarded)
+    const editor = document.getElementById('editor');
+    if (editor) editor.style.display = 'none';
+    else dbg('save: #editor not found to hide');
+
+    dbg('edit saved', newId);
+    editingQ = null;
+    editorHost = null;
+  });
+} else {
+  dbg('saveEditBtn not found at load');
+}
+
 
     // --- Export merged JSON ---
     document.getElementById('exportBtn').addEventListener('click', async () => {
