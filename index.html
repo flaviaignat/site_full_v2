@@ -125,7 +125,7 @@ const selections = loadSelections();
 
 fetch('questions_parsed_full_v2.json')
   .then(r => r.json())
-  .then(data => { ALL = data; mergeAdded(); idx = 0; (); render(); })
+  .then(data => { ALL = data; mergeAdded(); idx = 0; render(); })
   .catch(err => { document.getElementById('qtitle').textContent = 'Failed to load questions.'; });
 
 function render(){
