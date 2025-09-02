@@ -7651,32 +7651,19 @@
       "d"
     ]
   },
-  {
-    "id": "V.5",
-    "stem": "*In iron deficiency anaemia , the peripheral blood smear has:",
-    "type": "single",
-    "options": [
-      {
-        "key": "a",
-        "text": "a. Schizocytes b) Spherocytes"
-      },
-      {
-        "key": "c",
-        "text": "c. Fragmented erythrocytes"
-      },
-      {
-        "key": "d",
-        "text": "d. Microcytic erythrocytes, hypochromic"
-      },
-      {
-        "key": "e",
-        "text": "e. Macrocytes"
-      }
-    ],
-    "correct": [
-      "d"
-    ]
-  },
+    {
+  "id": "V.5",
+  "stem": "In iron deficiency anaemia , the peripheral blood smear has:",
+  "type": "single",
+  "options": [
+    { "key": "a", "text": "a. Schizocytes" },
+    { "key": "b", "text": "b. Spherocytes" },
+    { "key": "c", "text": "c. Fragmented erythrocytes" },
+    { "key": "d", "text": "d. Microcytic erythrocytes, hypochromic" },
+    { "key": "e", "text": "e. Macrocytes" }
+  ],
+  "correct": ["d"]
+},
   {
     "id": "V.7",
     "stem": "Factors influencing iron absorption:",
