@@ -239,8 +239,10 @@ function openEditor(q, host){
   dbg('openEditor', q.id, 'host?', !!editorHost);
 
   // Get the editor element and guard it
-  const editor = document.getElementById('editor');
-  if (!editor) { dbg('openEditor: #editor not found'); return; }
+  const editor =
+  document.getElementById('editor') ||
+  document.getElementById('inlineEditor');
+  if (!editor) { dbg('openEditor: no #editor/#inlineEditor on page'); return; }
   if (!editorHost || !editorHost.parentNode) { dbg('openEditor: no valid host'); return; }
 
   // SAFER move: use parentNode.insertBefore with nextSibling (works everywhere)
